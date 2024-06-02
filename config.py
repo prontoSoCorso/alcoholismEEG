@@ -1,48 +1,18 @@
 ''' Configuration file for the project'''
 
 class user_paths:
-    # Per computer fisso
-    path_BlastoData = "/home/giovanna/Documents/Data/BlastoData/"
-    
-    #Per computer portatile
-    #path_BlastoData = "C:/Users/loren/Documents/Data/BlastoData/"
+    # Computer Lorenzo
+    path_alcoholismEEG_data = "C:/Users/loren/Documents/Data/eegData/eeg_full/"
+
+    # Computer Marzio
+
 
 
 class Config_00_createCsv:
+    output_path_csv = "C:/Users/loren/Documents/Data/eegData/eeg_data.csv"
     
-
-
-
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    
 
 
 
