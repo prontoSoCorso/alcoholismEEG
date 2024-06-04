@@ -5,7 +5,6 @@ import sys
 sys.path.append("C:/Users/loren/OneDrive - Università di Pavia/Magistrale - Sanità Digitale/alcoholismEEG/")
 #sys.path.append("/home/giovanna/Desktop/Lorenzo/...)
 from config import user_paths as path
-from config import Config_00_createCsv as conf
 
 
 # Funzione per processare i file di misurazioni
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(data, columns=columns)
 
     # Salvare il DataFrame in un file CSV
-    output_csv_path = conf.output_path_csv
+    output_csv_path = path.output_path_csv
     df.to_csv(output_csv_path, index=False)
 
     print("Dati salvati in formato CSV.")

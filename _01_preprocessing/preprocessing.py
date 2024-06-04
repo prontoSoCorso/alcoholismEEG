@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.append("C:/Users/loren/OneDrive - Università di Pavia/Magistrale - Sanità Digitale/alcoholismEEG/")
 #sys.path.append("/home/giovanna/Desktop/Lorenzo/...)
-from config import Config_00_createCsv as conf
+from config import user_paths
 
-df = pd.read_csv(conf.output_path_csv)
+df = pd.read_csv(user_paths.output_path_csv)
 
 print(df.columns)  # Stampa i nomi delle colonne
 

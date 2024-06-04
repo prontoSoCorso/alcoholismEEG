@@ -16,14 +16,12 @@ La LSTM restituisce così in output un tensore di dimensione (8,50,5), in cui
 Proprio per questo alla fine prendo solo l'ultimo (-1) della seconda dimensione con out[:,-1,:] --> come prendere l'ultima matrice all'ultimo tempo delle sequenze
 
 
-Nel caso degli EEG il problema è che ogni riga della matrice 64x256 deve essere analizzata indipendentemente. 
-Ogni elettrodo infatti rileva un segnale di cui voglio raccongliere delle informazioni riassuntive, che saranno della dimensione dell'hidden_size
-Dunque, prendo un batch di matrici e gioco sul numero di canali. Invertendo le dimensioni riesco ad ottenere un tensore del tipo:
-
-
-
-
-
+Nel caso degli EEG il problema è che ogni riga della matrice 64x256 deve essere analizzata indipendentemente, ma dalla stessa LSTM, prima di aggiornare i pesi della rete. 
+Ogni elettrodo infatti rileva un segnale di cui voglio raccoglierne delle informazioni riassuntive, che saranno della dimensione dell'hidden_size
+Dunque, prendo un batch di matrici e vado ad applicare in modo sequenziale la mia LSTM all'i-esima riga di ogni matrice (batch di righe).
+Una volta applicata alla singola riga ne salvo l'output e ripeto per le 64 righe.
+Fatto questo, ne faccio lo stack e solo a quel punto posso aggiornare i pesi o, come nel nostro caso, passare la matrice allo strato successivo di una rete più complessa
+per poi andare ad aggiornare i pesi solo alla fine di tutto.
 
 '''
 
@@ -66,7 +64,7 @@ class LSTMnetwork(nn.Module):
 seq_length = 256    # = input_size
 hidden_size = 10
 num_layers = 3
-bidirectional = False
+bidirectional = True
 
 # Creazione del modello
 model = LSTMnetwork(seq_length, hidden_size, num_layers, bidirectional)
@@ -81,9 +79,10 @@ input_data = torch.randn(batch_size, num_channels, seq_length)  # batch_size=8, 
 output = model(input_data)
 
 # Visualizzazione della rete
+'''
 model_graph = draw_graph(model, input_size=(batch_size, num_channels, seq_length), expand_nested=True)  # Dimensioni dell'input
 model_graph.visual_graph.render("LSTMnetwork", format="png")
-
+'''
 
 print("Dimensioni dell'input:")
 print(input_data.size())  # torch.Size([8, 64, 256])
