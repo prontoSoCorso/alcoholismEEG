@@ -6,28 +6,19 @@ import numpy as np
 
 import sys
 sys.path.append("C:/Users/loren/OneDrive - Università di Pavia/Magistrale - Sanità Digitale/alcoholismEEG/")
+import loadData
+from _02_graphDefinition import graphCreation
 from config import utils
 from config import user_paths
 from _03_CoCoNetAndLayers import CoCoNet
 
+import networkx as nx
 
 
-if __name__ == "main":
+if __name__ == "__main__":
 
     # Importo il CSV e lo converto in un dataframe
-    data = pd.read_csv(user_paths.output_path_csv)
-
-    # Devo definire funzione che mi estragga bene i dati per metterli nel dataloader
-    '''
-        --> Devo separare dati e labels
-        --> Nei dati devo tenere solo le sequenze temporali divise come una lista(?) di matrici 64x256
-    '''
-    def create_matrices_list():
-        mat_list = ""
-        return mat_list
-
-    
-
+    df = pd.read_csv(user_paths.output_path_csv)
 
     # Funzione per impostare il seed
     def seed_everything(seed=0):
@@ -42,17 +33,28 @@ if __name__ == "main":
 
     seed_everything(utils.seed)
 
-    train_dataset = 1
-    val_dataset = 2
+    # Creo l'oggetto dataset
+    dataset = loadData.LoadData(df, utils.num_channels, utils.seq_lenght)
+
+    # Creo il grafo fisso degli elettrodi
+    G = graphCreation.createGraph()
+
+    # Splitto il dataset in training, validation, e test sets
+    train_dataset, val_dataset, test_dataset = dataset.split_dataset(utils.train_size, utils.val_size, utils.test_size)
+
+    # Print dimensioni sets
+    print(f'Training set size: {len(train_dataset)}')
+    print(f'Validation set size: {len(val_dataset)}')
+    print(f'Test set size: {len(test_dataset)}')
+
 
     # Create DataLoader objects for training and validation
     train_loader = DataLoader(train_dataset, batch_size=utils.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=utils.batch_size, shuffle=False)
 
 
-
     # Definizione del modello, dell'optimizer utilizzato e della Loss Function
-    model = CoCoNet(utils.seq_lenght, utils.hidden_size, utils.num_layers, utils.bidirectional, utils.num_classes, utils.dim_lastConvGCN)
+    model = CoCoNet.CoCoNet(utils.seq_lenght, utils.hidden_size, utils.num_layers, utils.bidirectional, utils.dim_lastConvGCN, G)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.BCEWithLogitsLoss()      # (binary cross-entropy for binary classification)
 
@@ -80,8 +82,6 @@ if __name__ == "main":
     
     '''
 
-
-
     
     for epoch in range(utils.num_epochs):
         model.train()  # Imposta la modalità di training
@@ -92,18 +92,15 @@ if __name__ == "main":
 
         for inputs, labels in train_loader:
             inputs = inputs.to(utils.device)
-            labels = labels.to(utils.device)
+            labels = labels.float().to(utils.device)
 
             optimizer.zero_grad()  # Azzeramento dei gradienti, altrimenti ogni volta si aggiungono a quelli calcolati al loop precedente
-
-            # Aggiungo la dimensione del batch
-            inputs = inputs.unsqueeze(1)
 
             # Calcolo output modello
             outputs = model(inputs)
 
             # Calcola la loss
-            loss = criterion(torch.squeeze(outputs, 1), labels)
+            loss = criterion(torch.squeeze(outputs,1), labels)
 
             # Calcola l'accuracy
             predictions = (outputs > 0.5).float()
@@ -124,11 +121,10 @@ if __name__ == "main":
             epoch_val_loss = 0.0
             correct_val_predictions = 0
             total_val_samples = 0
+
             for inputs, labels in val_loader:
                 inputs = inputs.to(utils.device)
-                labels = labels.to(utils.device)
-
-                inputs = inputs.unsqueeze(1)
+                labels = labels.float().to(utils.device)
 
                 outputs = model(inputs)
 

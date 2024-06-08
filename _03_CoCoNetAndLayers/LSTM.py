@@ -30,6 +30,7 @@ per poi andare ad aggiornare i pesi solo alla fine di tutto.
 class LSTMnetwork(nn.Module):
     def __init__(self, seq_length, hidden_size, num_layers, bidirectional):
         super(LSTMnetwork, self).__init__()
+        self.seq_length = seq_length
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.bidirectional = bidirectional
@@ -69,8 +70,8 @@ bidirectional = True
 # Creazione del modello
 model = LSTMnetwork(seq_length, hidden_size, num_layers, bidirectional)
 
-num_channels = 64
-batch_size = 8
+num_channels = 5
+batch_size = 3
 
 # Input data
 input_data = torch.randn(batch_size, num_channels, seq_length)  # batch_size=8, num_channels=64, seq_length=256

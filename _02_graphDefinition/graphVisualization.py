@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 # Visualization function for NX graph or PyTorch tensor
 def plotGraph(G):
     # Plot the graph
-    plt.figure(figsize=(12, 10))  # Adjust figure size
-    pos = nx.spring_layout(G,
-                           seed=42)  # Position nodes using the spring layout algorithm with fixed seed for reproducibility
+    plt.figure(figsize=(10, 8))  # Adjust figure size
+    pos = nx.get_node_attributes(G, 'pos')
     nx.draw(G, pos, with_labels=True, node_size=500, node_color='skyblue', font_size=10, font_weight='bold',
             edge_color='gray', width=2)  # Adjust node size, font size, and edge width
     edge_labels = {(u, v): f"{w:.2f}" for u, v, w in G.edges(data='weight')}
