@@ -2,11 +2,18 @@ import torch
 import torch.nn as nn
 import torch_geometric
 
-
+import os
+# Ottieni il percorso del file corrente
+current_file_path = os.path.abspath(__file__)
+# Risali la gerarchia fino alla cartella "alcoholismEEG"
+parent_dir = os.path.dirname(current_file_path)
+while not os.path.basename(parent_dir) == "alcoholismEEG":
+    parent_dir = os.path.dirname(parent_dir)
 import sys
-sys.path.append("C:/Users/loren/OneDrive - Università di Pavia/Magistrale - Sanità Digitale/alcoholismEEG/")
+sys.path.append(parent_dir)
+
 from _02_graphDefinition import graphNetworkxToPyg
-from _03_CoCoNetAndLayers import LSTM, GCN 
+from _03_CoCoNetAndLayers import LSTM, GCN
 
 
 
@@ -49,6 +56,6 @@ class CoCoNet(torch.nn.Module):
         # Apply final linear layer
         logits = self.fc(gcn_out)
 
-        return logits
+        return logits, gcn_out
 
 

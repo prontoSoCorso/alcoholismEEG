@@ -4,21 +4,27 @@ from torch_geometric.data import DataLoader
 import random
 import numpy as np
 
+import os
+# Ottieni il percorso del file corrente
+current_file_path = os.path.abspath(__file__)
+# Risali la gerarchia fino alla cartella "alcoholismEEG"
+parent_dir = os.path.dirname(current_file_path)
+while not os.path.basename(parent_dir) == "alcoholismEEG":
+    parent_dir = os.path.dirname(parent_dir)
 import sys
-sys.path.append("C:/Users/loren/OneDrive - Università di Pavia/Magistrale - Sanità Digitale/alcoholismEEG/")
+sys.path.append(parent_dir)
+
 import loadData
 from _02_graphDefinition import graphCreation
 from config import utils
 from config import user_paths
 from _03_CoCoNetAndLayers import CoCoNet
 
-import networkx as nx
-
 
 if __name__ == "__main__":
 
     # Importo il CSV e lo converto in un dataframe
-    df = pd.read_csv(user_paths.output_path_csv)
+    df = pd.read_csv(user_paths.output_path_trial_csv + utils.selected_file + ".csv")
 
     # Funzione per impostare il seed
     def seed_everything(seed=0):
@@ -34,7 +40,7 @@ if __name__ == "__main__":
     seed_everything(utils.seed)
 
     # Creo l'oggetto dataset
-    dataset = loadData.LoadData(df, utils.num_channels, utils.seq_lenght)
+    dataset = loadData.LoadData(df, utils.num_channels, utils.seq_length)
 
     # Creo il grafo fisso degli elettrodi
     G = graphCreation.createGraph()
@@ -54,35 +60,13 @@ if __name__ == "__main__":
 
 
     # Definizione del modello, dell'optimizer utilizzato e della Loss Function
-    model = CoCoNet.CoCoNet(utils.seq_lenght, utils.hidden_size, utils.num_layers, utils.bidirectional, utils.dim_lastConvGCN, G)
+    model = CoCoNet.CoCoNet(utils.seq_length, utils.hidden_size, utils.num_layers, utils.bidirectional, utils.dim_lastConvGCN, G)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    criterion = torch.nn.BCEWithLogitsLoss()      # (binary cross-entropy for binary classification)
+    criterion = torch.nn.BCEWithLogitsLoss()  # Binary cross-entropy for binary classification
 
-    
-    '''
-    # start a new wandb run to track this script
-    wandb.init(
-        # Set the W&B project where this run will be logged
-        project=conf.project_name,
+    # Path to save the best model checkpoint
+    best_val_loss = float('inf')
 
-        # Track hyperparameters and run metadata
-        config={
-            "exp_name": conf.exp_name,
-            "dataset": conf.dataset,
-            "model": conf.model_name,
-            "num_epochs": conf.num_epochs,
-            "batch_size": conf.batch_size,
-            "learning_rate": conf.learning_rate,
-            "optimizer_type": conf.optimizer_type,
-            "img_size": conf.img_size, 
-            "num_classes": conf.num_classes
-        }
-    )
-    wandb.run.name = conf.exp_name
-    
-    '''
-
-    
     for epoch in range(utils.num_epochs):
         model.train()  # Imposta la modalità di training
 
@@ -94,13 +78,13 @@ if __name__ == "__main__":
             inputs = inputs.to(utils.device)
             labels = labels.float().to(utils.device)
 
-            optimizer.zero_grad()  # Azzeramento dei gradienti, altrimenti ogni volta si aggiungono a quelli calcolati al loop precedente
+            optimizer.zero_grad()  # Azzeramento dei gradienti
 
             # Calcolo output modello
-            outputs = model(inputs)
+            outputs, _ = model(inputs)
 
             # Calcola la loss
-            loss = criterion(torch.squeeze(outputs,1), labels)
+            loss = criterion(torch.squeeze(outputs, 1), labels)
 
             # Calcola l'accuracy
             predictions = (outputs > 0.5).float()
@@ -108,12 +92,9 @@ if __name__ == "__main__":
             total_train_samples += labels.size(0)
 
             # Calcola i gradienti e aggiorna i pesi
-            loss.backward()     # The new loss adds to what the last one computed, non lo fa la total loss
+            loss.backward()
             epoch_train_loss += loss.item()
-            
             optimizer.step()
-
-        
 
         # Valutazione della rete su validation
         model.eval()
@@ -126,7 +107,7 @@ if __name__ == "__main__":
                 inputs = inputs.to(utils.device)
                 labels = labels.float().to(utils.device)
 
-                outputs = model(inputs)
+                outputs, _ = model(inputs)
 
                 loss = criterion(torch.squeeze(outputs, 1), labels)
                 epoch_val_loss += loss.item()
@@ -134,7 +115,6 @@ if __name__ == "__main__":
                 predictions = (outputs > 0.5).float()
                 correct_val_predictions += (torch.squeeze(predictions, 1) == labels).sum().item()
                 total_val_samples += labels.size(0)
-
 
         # Calcola loss e accuracy per epoca sul train e validation set
         epoch_val_loss /= len(val_loader)
@@ -146,15 +126,11 @@ if __name__ == "__main__":
         train_loss = epoch_train_loss
         train_accuracy = correct_train_predictions / total_train_samples
 
-        '''
-
-        wandb.log({'epoch': epoch + 1,
-                   'train_accuracy': train_accuracy,
-                   'train_loss': train_loss,
-                   'val_accuracy': val_accuracy,
-                   'val_loss': val_loss})
-
-        '''
+        # Salva il modello migliore basato sulla validazione
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            torch.save(model.state_dict(), utils.best_model_path)
+            print(f"Model saved at epoch {epoch + 1}")
 
         # Stampa delle informazioni sull'epoca
         print(f'Epoch [{epoch+1}/{utils.num_epochs}], Train Loss: {train_loss}, Train Accuracy: {train_accuracy}, Val Loss: {val_loss}, Val Accuracy: {val_accuracy}')

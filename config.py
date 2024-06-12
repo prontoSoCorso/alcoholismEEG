@@ -5,6 +5,7 @@ class user_paths:
     # Computer Lorenzo
     path_alcoholismEEG_data = "C:/Users/loren/Documents/Data/eegData/eeg_full/"
     output_path_csv = "C:/Users/loren/Documents/Data/eegData/eeg_data.csv"
+    output_path_trial_csv = "C:/Users/loren/Documents/Data/eegData/"
 
     # Computer Marzio
     #path_alcoholismEEG_data = "C://users/Riccardo/Desktop/Marzio/Advanced/Project/"
@@ -16,6 +17,8 @@ class utils:
     # generics
     seed = 2024
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    selected_file = "S2_match"          # S1_obj, S2_nomatch
+    best_model_path = "./_05_test/best_model_" + selected_file + ".pth"
 
     # DataLoader
     num_channels = 64
@@ -24,7 +27,7 @@ class utils:
     test_size = 1 - (train_size + val_size)
     
     # LSTM params
-    seq_lenght =  256
+    seq_length =  256
     hidden_size = 64
     num_layers = 2
     bidirectional = False
@@ -34,6 +37,6 @@ class utils:
     dim_lastConvGCN = 16
 
     # CoCoNet params
-    batch_size = 8
-    num_epochs = 1
+    batch_size = 16
+    num_epochs = 3
     num_classes = 2
