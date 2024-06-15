@@ -1,5 +1,6 @@
 ''' Configuration file for the project'''
 import torch
+import math
 
 class user_paths:
     # Computer Lorenzo
@@ -34,7 +35,11 @@ class utils:
    
     # GCN params
     dim_firstConvGCN = 32
+    kernel_size_1 = 5
+    padding_size_1 = math.floor(kernel_size_1/2)
     dim_lastConvGCN = 16
+    kernel_size_2 = 3
+    padding_size_2 = math.floor(kernel_size_2/2)
 
     # CoCoNet params
     batch_size = 16

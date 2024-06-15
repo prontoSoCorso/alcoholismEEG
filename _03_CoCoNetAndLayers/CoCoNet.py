@@ -43,6 +43,7 @@ class CoCoNet(torch.nn.Module):
         pyg_data_list = graphNetworkxToPyg.create_pyg_data_list(self.G, lstm_out)
 
         # Converto la pyg list in un oggetto batch di pyg
+        # A data object describing a batch of graphs as one big (disconnected) graph
         pyg_batch = torch_geometric.data.Batch.from_data_list(pyg_data_list) 
 
         # Creazione del tensore batch

@@ -23,6 +23,8 @@ Una volta applicata alla singola riga ne salvo l'output e ripeto per le 64 righe
 Fatto questo, ne faccio lo stack e solo a quel punto posso aggiornare i pesi o, come nel nostro caso, passare la matrice allo strato successivo di una rete più complessa
 per poi andare ad aggiornare i pesi solo alla fine di tutto.
 
+UPDATE: non è necessario, se si fa la reshape basta passare un unico batch gigante, applicare LSTM e poi fare di nuovo reshape
+
 '''
 
 
@@ -41,9 +43,14 @@ class LSTMnetwork(nn.Module):
         batch_size, num_channels, seq_length = x.size()
         
         # Inizializzo gli hidden states e le cell states
-        h0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size, self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size, self.hidden_size).to(x.device)
+        h0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_channels, self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_channels, self.hidden_size).to(x.device)
 
+        lstm_out, _ = self.lstm(x.reshape(batch_size*num_channels, 1, seq_length), (h0, c0))    # input.shape = (1024,1,256),  lstm_out.shape = (1024,1,64)
+        lstm_out = lstm_out.reshape(batch_size, num_channels, self.hidden_size)                 # Riottengo forma del tipo (16,64,64)
+
+        
+        '''
         # Elaboro ogni canale indipendentemente attraverso la LSTM
         # Per questo faccio il ciclo for andando a prendere x[:,i,:], selezionando così un canale alla volta
         lstm_out = []
@@ -56,38 +63,7 @@ class LSTMnetwork(nn.Module):
         
         # Transpose back to original shape (batch_size, num_channels, hidden_size)
         lstm_out = lstm_out.transpose(0, 1)  # shape: (batch_size, num_channels, hidden_size)
+        '''
 
         return lstm_out
-
-
-
-# Parametri della rete
-seq_length = 256    # = input_size
-hidden_size = 10
-num_layers = 3
-bidirectional = True
-
-# Creazione del modello
-model = LSTMnetwork(seq_length, hidden_size, num_layers, bidirectional)
-
-num_channels = 5
-batch_size = 3
-
-# Input data
-input_data = torch.randn(batch_size, num_channels, seq_length)  # batch_size=8, num_channels=64, seq_length=256
-
-# Forward pass
-output = model(input_data)
-
-# Visualizzazione della rete
-'''
-model_graph = draw_graph(model, input_size=(batch_size, num_channels, seq_length), expand_nested=True)  # Dimensioni dell'input
-model_graph.visual_graph.render("LSTMnetwork", format="png")
-'''
-
-print("Dimensioni dell'input:")
-print(input_data.size())  # torch.Size([8, 64, 256])
-print("Dimensioni dell'output:")
-print(output.size())  # torch.Size([8, 64, hidden_size])
-
 
