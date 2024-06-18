@@ -33,13 +33,16 @@ def networkx_to_pyg_classification(G, feature_matrix):
 
 
 
-def create_pyg_data_list(G, feature_matrix):
+def create_pyg_data_list(G, feature_matrix, num_trials):
     pyg_data_list = []
 
     for i in range(feature_matrix.shape[0]):
         for j in range(feature_matrix.shape[1]):
-            pyg_data = networkx_to_pyg_classification(G, feature_matrix[i, j, :, :].squeeze(0,1))
-            pyg_data_list.append(pyg_data)
+            if j < num_trials[i]:
+                pyg_data = networkx_to_pyg_classification(G, feature_matrix[i, j, :, :].squeeze(0,1))
+                pyg_data_list.append(pyg_data)
+            else:
+                break
 
     return pyg_data_list
 

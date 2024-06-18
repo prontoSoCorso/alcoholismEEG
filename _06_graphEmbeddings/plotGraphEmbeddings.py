@@ -9,7 +9,7 @@ def plot_graph_embeddings(data, labels):
     colors = np.array(['blue', 'green'])
 
     # t-SNE
-    tsne = TSNE(n_components=2, random_state=42)
+    tsne = TSNE(n_components=2, random_state=42, perplexity=5)
     tsne_results = tsne.fit_transform(data)
 
     # UMAP

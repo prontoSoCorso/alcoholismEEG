@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import random
 import numpy as np
+import wandb
 
 import os
 # Ottieni il percorso del file corrente
@@ -22,8 +23,11 @@ from _03_CoCoNetAndLayers import CoCoNet
 
 
 def collate_fn(batch):
+    # Creo vettore riassuntivo della profondità di ogni paziente
+    num_trials = [x[0].size(0) for x in batch]
+
     # Trova la massima profondità nel batch
-    max_depth = max([x[0].size(0) for x in batch])
+    max_depth = max(num_trials)
     num_channels = batch[0][0].size(1)
     seq_length = batch[0][0].size(2)
 
@@ -36,7 +40,7 @@ def collate_fn(batch):
         padded_batch[i, :depth, :, :] = tensor
         labels[i] = label
 
-    return padded_batch, labels
+    return padded_batch, labels, num_trials
 
 
 if __name__ == "__main__":
@@ -45,17 +49,7 @@ if __name__ == "__main__":
     df = pd.read_csv(user_paths.output_path_trial_csv + utils.selected_file + ".csv")
 
     # Funzione per impostare il seed
-    def seed_everything(seed=0):
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-    seed_everything(utils.seed)
+    utils.seed_everything(utils.seed)
 
     # Creo l'oggetto dataset
     dataset = loadData.LoadData(df, utils.num_channels, utils.seq_length)
@@ -78,11 +72,30 @@ if __name__ == "__main__":
 
     # Definizione del modello, dell'optimizer utilizzato e della Loss Function
     model = CoCoNet.CoCoNet(utils.seq_length, utils.hidden_size, utils.num_layers, utils.bidirectional, utils.dim_lastConvGCN, G)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=utils.learning_rate)
     criterion = torch.nn.BCEWithLogitsLoss()  # Binary cross-entropy for binary classification
 
     # Path to save the best model checkpoint
     best_val_loss = float('inf')
+
+    # start a new wandb run to track this script
+    wandb.init(
+        # Set the W&B project where this run will be logged
+        project=utils.project_name,
+
+        # Track hyperparameters and run metadata
+        config={
+            "exp_name": utils.exp_name,
+            "dataset": utils.dataset,
+            "model": utils.model_name,
+            "num_epochs": utils.num_epochs,
+            "batch_size": utils.batch_size,
+            "learning_rate": utils.learning_rate,
+            "optimizer_type": utils.optimizer_type,
+            "num_classes": utils.num_classes
+        }
+    )
+    wandb.run.name = utils.exp_name
 
     for epoch in range(utils.num_epochs):
         model.train()  # Imposta la modalità di training
@@ -91,14 +104,14 @@ if __name__ == "__main__":
         correct_train_predictions = 0
         total_train_samples = 0
 
-        for inputs, labels in train_loader:
+        for inputs, labels, num_trials in train_loader:
             inputs = inputs.to(utils.device)
             labels = labels.float().to(utils.device)
 
             optimizer.zero_grad()  # Azzeramento dei gradienti
 
             # Calcolo output modello
-            outputs, _ = model(inputs)
+            outputs, _ = model(inputs, num_trials)
 
             # Calcola la loss
             loss = criterion(torch.squeeze(outputs, 1), labels)
@@ -120,11 +133,11 @@ if __name__ == "__main__":
             correct_val_predictions = 0
             total_val_samples = 0
 
-            for inputs, labels in val_loader:
+            for inputs, labels, num_trials in val_loader:
                 inputs = inputs.to(utils.device)
                 labels = labels.float().to(utils.device)
 
-                outputs, _ = model(inputs)
+                outputs, _ = model(inputs, num_trials)
 
                 loss = criterion(torch.squeeze(outputs, 1), labels)
                 epoch_val_loss += loss.item()
@@ -148,6 +161,13 @@ if __name__ == "__main__":
             best_val_loss = val_loss
             torch.save(model.state_dict(), utils.best_model_path)
             print(f"Model saved at epoch {epoch + 1}")
+
+
+        wandb.log({'epoch': epoch + 1,
+                   'train_accuracy': train_accuracy,
+                   'train_loss': train_loss,
+                   'val_accuracy': val_accuracy,
+                   'val_loss': val_loss})
 
         # Stampa delle informazioni sull'epoca
         print(f'Epoch [{epoch+1}/{utils.num_epochs}], Train Loss: {train_loss}, Train Accuracy: {train_accuracy}, Val Loss: {val_loss}, Val Accuracy: {val_accuracy}')

@@ -34,13 +34,12 @@ class CoCoNet(torch.nn.Module):
         self.fc = nn.Linear(dim_lastConvGCN, 1)
 
 
-    def forward(self, data):
-        
+    def forward(self, data, num_trials):
         # Pass data through LSTM
-        lstm_out = self.lstm(data)  # Il data è il singolo batch fornito (4D (batch_size, num_trials, channels, seq_lenght))
+        lstm_out = self.lstm(data, num_trials)  # Il data è il singolo batch fornito (4D (batch_size, num_trials, channels, seq_lenght))
 
         # L'output della LSTM è la feature matrix. Da qui devo creare il pyg data list da fornire come input alla GCN
-        pyg_data_list = graphNetworkxToPyg.create_pyg_data_list(self.G, lstm_out)
+        pyg_data_list = graphNetworkxToPyg.create_pyg_data_list(self.G, lstm_out, num_trials)
 
         # Converto la pyg list in un oggetto batch di pyg
         # A data object describing a batch of graphs as one big (disconnected) graph
@@ -48,8 +47,7 @@ class CoCoNet(torch.nn.Module):
 
         # Creazione del tensore batch
         batch_size = lstm_out.size(0)                               # Numero di pazienti nel batch
-        num_nodes_for_patient = len(self.G.nodes)*lstm_out.size(1)  # Numero di nodi totali per ogni paziente (num_nodes*num_grafi_paziente)
-        info_batch = torch.tensor([i for i in range(batch_size) for _ in range(num_nodes_for_patient)], dtype=torch.long)
+        info_batch = torch.tensor([i for i in range(batch_size) for _ in range(len(self.G.nodes)*num_trials[i])], dtype=torch.long)
 
         # Pass LSTM output through GCN
         gcn_out = self.GCN(pyg_batch, info_batch)

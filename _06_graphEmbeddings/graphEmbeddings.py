@@ -19,7 +19,7 @@ from _02_graphDefinition import graphCreation
 from config import utils
 from config import user_paths
 from _03_CoCoNetAndLayers import CoCoNet
-import _06_graphEmbeddings.plotGraphEmbeddings as plotGraphEmbeddings
+import plotGraphEmbeddings
 
 
 def collate_fn(batch):
@@ -58,16 +58,8 @@ if __name__ == "__main__":
     # Creo il grafo fisso degli elettrodi
     G = graphCreation.createGraph()
 
-    # Splitto il dataset in training, validation, e test sets
-    train_dataset, val_dataset, test_dataset = dataset.split_dataset(utils.train_size, utils.val_size, utils.test_size)
-
-    # Print dimensioni sets
-    print(f'Training set size: {len(train_dataset)}')
-    print(f'Validation set size: {len(val_dataset)}')
-    print(f'Test set size: {len(test_dataset)}')
-
     # Create DataLoader objects for training and validation
-    test_loader = DataLoader(dataset=test_dataset, batch_size=utils.batch_size, shuffle=False, collate_fn=collate_fn)
+    loader = DataLoader(dataset=dataset, batch_size=utils.batch_size, shuffle=False, collate_fn=collate_fn)
     # La dimensione del batch sarà (batch_size, max_depth_in_batch, num_channels, num_features)
 
     # Definizione del modello, dell'optimizer utilizzato e della Loss Function
@@ -80,13 +72,10 @@ if __name__ == "__main__":
     # Valutazione finale sul test set
     model.eval()
     with torch.no_grad():
-        test_loss = 0.0
-        correct_test_predictions = 0
-        total_test_samples = 0
         gcn_out = []
         all_labels = []
 
-        for inputs, labels, num_trials in test_loader:
+        for inputs, labels, num_trials in loader:
             inputs = inputs.to(utils.device)
             labels = labels.float().to(utils.device)
 
@@ -96,15 +85,13 @@ if __name__ == "__main__":
             all_labels.append(labels)
 
             loss = criterion(torch.squeeze(outputs, 1), labels)
-            test_loss += loss.item()
 
             predictions = (outputs > 0.5).float()
-            correct_test_predictions += (torch.squeeze(predictions, 1) == labels).sum().item()
-            total_test_samples += labels.size(0)
 
 
-    # Calcola loss e accuracy medie sul test set
-    test_loss /= len(test_loader)
-    test_accuracy = correct_test_predictions / total_test_samples
+    # Stack all the outputs from the GCN
+    gcn_out = torch.cat(gcn_out).cpu().numpy()
+    all_labels = torch.cat(all_labels).cpu().numpy().astype(int)
 
-    print(f'Test Loss: {test_loss}, Test Accuracy: {test_accuracy}')
+    # Plot graphs embeddings (UMAP and t-SNE)
+    plotGraphEmbeddings.plot_graph_embeddings(gcn_out, all_labels)

@@ -38,18 +38,35 @@ class LSTMnetwork(nn.Module):
         self.bidirectional = bidirectional
         self.lstm = nn.LSTM(input_size=seq_length, hidden_size=hidden_size, num_layers=num_layers, batch_first=True, bidirectional=bidirectional)
 
-    def forward(self, x):
+    def forward(self, x, num_trials):
         # x shape: (batch_size, num_channels, seq_length)
-        batch_size, num_trials, num_channels, seq_length = x.size()
-        
+        batch_size, num_max_trials, num_channels, seq_length = x.size()
+
+        patient_list = []
+        for i in range(batch_size):
+            patient_list.append(x[i, :num_trials[i], :, :])
+        # Concatenate tensors along the first dimension (depth)
+        patient_list = torch.cat(patient_list, dim=0)
+        patient_list = patient_list.reshape(sum(num_trials)*num_channels, 1, seq_length)
+
         # Inizializzo gli hidden states e le cell states
-        h0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_trials*num_channels, self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_trials*num_channels, self.hidden_size).to(x.device)
+        h0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), sum(num_trials)*num_channels, self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), sum(num_trials)*num_channels, self.hidden_size).to(x.device)
 
-        lstm_out, _ = self.lstm(x.reshape(batch_size*num_trials*num_channels, 1, seq_length), (h0, c0))    # input.shape = (1024,1,256),  lstm_out.shape = (1024,1,64)
-        lstm_out = lstm_out.reshape(batch_size, num_trials, num_channels, self.hidden_size)                 # Riottengo forma del tipo (16,64,64)
-
+        lstm_out, _ = self.lstm(patient_list, (h0, c0))    # input.shape = (sum(num_trials)*num_channels,1,256),  lstm_out.shape = (sum(num_trials)*num_channels,1,64)
         
+        # Crea un batch con padding
+        padded_batch = torch.zeros((batch_size, num_max_trials, num_channels, self.hidden_size))
+
+        for i in range(batch_size):
+            depth = num_trials[i]
+            start_index = sum(num_trials[0:i])*num_channels
+            end_index = sum(num_trials[0:i+1])*num_channels
+            padded_batch[i, :depth, :, :] = lstm_out[start_index:end_index, :, :].reshape(depth, num_channels, self.hidden_size)
+
+        lstm_out = padded_batch     # Riottengo forma del tipo (4, num_max_trials, 64, 64)
+
+
         '''
         # Elaboro ogni canale indipendentemente attraverso la LSTM
         # Per questo faccio il ciclo for andando a prendere x[:,i,:], selezionando così un canale alla volta
