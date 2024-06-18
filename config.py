@@ -42,6 +42,6 @@ class utils:
     padding_size_2 = math.floor(kernel_size_2/2)
 
     # CoCoNet params
-    batch_size = 16
+    batch_size = 4
     num_epochs = 3
     num_classes = 2

@@ -1,48 +1,49 @@
 import torch
 from torch.utils.data import Dataset
-from torchvision import transforms
-import pandas as pd
 import numpy as np
 
 class LoadData(Dataset):
     """
-    Custom Dataset class to load and preprocess images from a pandas DataFrame with specific row structure.
+    Custom Dataset class to load and preprocess data from a pandas DataFrame with specific row structure.
     """
 
     def __init__(self, dataframe, num_channels=64, seq_length=256):
         self.dataframe = dataframe
         self.num_channels = num_channels
         self.seq_length = seq_length
-        self.patient_ids = dataframe['Patient'].unique() #[:16] , se voglio prendere solo N pazienti tra i 120 disponibili
+        self.patient_ids = dataframe['Patient'].unique() # Prendi solo N pazienti se necessario, ad es. [:16]
+
+        # Raggruppa i dati per paziente
+        self.patient_data = []
+        for patient_id in self.patient_ids:
+            patient_df = dataframe[dataframe['Patient'] == patient_id]
+
+            patient_graphs = []
+            label = torch.tensor(patient_df.iloc[0, -1]).float()
+            num_graphs = int(patient_df.shape[0] / num_channels)
+            for idx in range(num_graphs):
+                start_row = idx * num_channels
+                graph_data = patient_df.iloc[start_row:start_row + num_channels, 3:-1].values.reshape(num_channels, seq_length)
+                graph = torch.from_numpy(graph_data).float()
+                patient_graphs.append(graph)
+            self.patient_data.append((torch.stack(patient_graphs), label))
 
     def __len__(self):
-        # Calculate the number of graphs based on the number of df_rows and channels
-        num_graphs = int(self.dataframe.shape[0] / self.num_channels)
-        return num_graphs
+        # Numero di pazienti
+        return len(self.patient_data)
 
     def __getitem__(self, idx):
         """
-        Retrieves a graph sample by extracting consecutive rows from the DataFrame.
+        Retrieves the data and labels for a specific patient.
 
         Args:
-            idx (int): Index of the graph sample (not row index).
+            idx (int): Index of the patient.
 
         Returns:
-            tuple: A tuple containing the preprocessed graph and its label (if available).
+            tuple: A tuple containing the preprocessed graphs and their labels.
         """
-        # Calculate the starting row index for the current graph
-        start_row = idx * self.num_channels
-
-        # Extract consecutive rows for the current graph
-        graph_data = self.dataframe.iloc[start_row:start_row + self.num_channels, 3:-1].values.reshape(-1, self.seq_length)
-
-        # Convert to PyTorch tensor and apply transformations if provided
-        graph = torch.from_numpy(graph_data).float()
-
-        # Retrieve label if present (assuming 'label' column)
-        label = torch.tensor(self.dataframe.iloc[start_row, -1])
-
-        return graph, label
+        patient_graphs, labels = self.patient_data[idx]
+        return patient_graphs, labels
     
 
 
@@ -60,8 +61,8 @@ class LoadData(Dataset):
         """
 
         # Ensure test_size + val_size <= 1
-        if test_size + val_size > 1:
-            raise ValueError("test_size + val_size must be less than or equal to 1")
+        if train_size + val_size + test_size != 1.0:
+            raise ValueError("train_size, val_size, and test_size must sum to 1")
 
 
         '''
@@ -75,6 +76,7 @@ class LoadData(Dataset):
         patient_groups = patient_groups.groupby('Patient')
         '''
 
+        '''
         # Group data by patient ID
         patient_groups = self.dataframe.groupby('Patient')
 
@@ -99,6 +101,26 @@ class LoadData(Dataset):
         train_data = pd.concat(data_splits[0])
         val_data = pd.concat(data_splits[1])
         test_data = pd.concat(data_splits[2])
+
+        train_dataset = LoadData(train_data, self.num_channels, self.seq_length)
+        val_dataset = LoadData(val_data, self.num_channels, self.seq_length)
+        test_dataset = LoadData(test_data, self.num_channels, self.seq_length)
+        '''
+
+        # Shuffle patient IDs
+        shuffled_ids = np.random.permutation(self.patient_ids)
+
+        # Split data by patient into training, validation, and test sets
+        num_train = int(train_size * len(shuffled_ids))
+        num_val = int(val_size * len(shuffled_ids))
+
+        train_ids = shuffled_ids[:num_train]
+        val_ids = shuffled_ids[num_train:num_train + num_val]
+        test_ids = shuffled_ids[num_train + num_val:]
+
+        train_data = self.dataframe[self.dataframe['Patient'].isin(train_ids)]
+        val_data = self.dataframe[self.dataframe['Patient'].isin(val_ids)]
+        test_data = self.dataframe[self.dataframe['Patient'].isin(test_ids)]
 
         train_dataset = LoadData(train_data, self.num_channels, self.seq_length)
         val_dataset = LoadData(val_data, self.num_channels, self.seq_length)

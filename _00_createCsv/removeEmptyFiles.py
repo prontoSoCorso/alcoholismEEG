@@ -1,9 +1,15 @@
-import os
-
-import sys
 import time
-sys.path.append("C:/Users/loren/OneDrive - Università di Pavia/Magistrale - Sanità Digitale/alcoholismEEG/")
-#sys.path.append("/home/giovanna/Desktop/Lorenzo/...)
+
+import os
+# Ottieni il percorso del file corrente
+current_file_path = os.path.abspath(__file__)
+# Risali la gerarchia fino alla cartella "alcoholismEEG"
+parent_dir = os.path.dirname(current_file_path)
+while not os.path.basename(parent_dir) == "alcoholismEEG":
+    parent_dir = os.path.dirname(parent_dir)
+import sys
+sys.path.append(parent_dir)
+
 from config import user_paths as path
 
 

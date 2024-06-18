@@ -40,14 +40,14 @@ class LSTMnetwork(nn.Module):
 
     def forward(self, x):
         # x shape: (batch_size, num_channels, seq_length)
-        batch_size, num_channels, seq_length = x.size()
+        batch_size, num_trials, num_channels, seq_length = x.size()
         
         # Inizializzo gli hidden states e le cell states
-        h0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_channels, self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_channels, self.hidden_size).to(x.device)
+        h0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_trials*num_channels, self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), batch_size*num_trials*num_channels, self.hidden_size).to(x.device)
 
-        lstm_out, _ = self.lstm(x.reshape(batch_size*num_channels, 1, seq_length), (h0, c0))    # input.shape = (1024,1,256),  lstm_out.shape = (1024,1,64)
-        lstm_out = lstm_out.reshape(batch_size, num_channels, self.hidden_size)                 # Riottengo forma del tipo (16,64,64)
+        lstm_out, _ = self.lstm(x.reshape(batch_size*num_trials*num_channels, 1, seq_length), (h0, c0))    # input.shape = (1024,1,256),  lstm_out.shape = (1024,1,64)
+        lstm_out = lstm_out.reshape(batch_size, num_trials, num_channels, self.hidden_size)                 # Riottengo forma del tipo (16,64,64)
 
         
         '''

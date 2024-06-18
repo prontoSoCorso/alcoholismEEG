@@ -1,6 +1,6 @@
 import pandas as pd
 import torch
-from torch_geometric.data import DataLoader
+from torch.utils.data import DataLoader
 import random
 import numpy as np
 
@@ -19,6 +19,24 @@ from _02_graphDefinition import graphCreation
 from config import utils
 from config import user_paths
 from _03_CoCoNetAndLayers import CoCoNet
+
+
+def collate_fn(batch):
+    # Trova la massima profondità nel batch
+    max_depth = max([x[0].size(0) for x in batch])
+    num_channels = batch[0][0].size(1)
+    seq_length = batch[0][0].size(2)
+
+    # Crea un batch con padding
+    padded_batch = torch.zeros((len(batch), max_depth, num_channels, seq_length))
+    labels = torch.zeros(len(batch))
+
+    for i, (tensor, label) in enumerate(batch):
+        depth = tensor.size(0)
+        padded_batch[i, :depth, :, :] = tensor
+        labels[i] = label
+
+    return padded_batch, labels
 
 
 if __name__ == "__main__":
@@ -53,11 +71,10 @@ if __name__ == "__main__":
     print(f'Validation set size: {len(val_dataset)}')
     print(f'Test set size: {len(test_dataset)}')
 
-
     # Create DataLoader objects for training and validation
-    train_loader = DataLoader(train_dataset, batch_size=utils.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=utils.batch_size, shuffle=False)
-
+    train_loader = DataLoader(dataset=train_dataset, batch_size=utils.batch_size, shuffle=True, collate_fn=collate_fn)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=utils.batch_size, shuffle=False, collate_fn=collate_fn)
+    # La dimensione del batch sarà (batch_size, max_depth_in_batch, num_channels, num_features)
 
     # Definizione del modello, dell'optimizer utilizzato e della Loss Function
     model = CoCoNet.CoCoNet(utils.seq_length, utils.hidden_size, utils.num_layers, utils.bidirectional, utils.dim_lastConvGCN, G)
@@ -134,8 +151,4 @@ if __name__ == "__main__":
 
         # Stampa delle informazioni sull'epoca
         print(f'Epoch [{epoch+1}/{utils.num_epochs}], Train Loss: {train_loss}, Train Accuracy: {train_accuracy}, Val Loss: {val_loss}, Val Accuracy: {val_accuracy}')
-
-
-
-
 
