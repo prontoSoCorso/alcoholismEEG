@@ -1,8 +1,7 @@
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
-import random
-import numpy as np
+from torchsummary import summary
 
 import os
 # Ottieni il percorso del file corrente
@@ -14,12 +13,11 @@ while not os.path.basename(parent_dir) == "alcoholismEEG":
 import sys
 sys.path.append(parent_dir)
 
-from _04_train import loadData
 from _02_graphDefinition import graphCreation
+from _03_CoCoNetAndLayers import CoCoNet
+from _04_train import loadData
 from config import utils
 from config import user_paths
-from _03_CoCoNetAndLayers import CoCoNet
-import _06_graphEmbeddings.plotGraphEmbeddings as plotGraphEmbeddings
 
 
 def collate_fn(batch):
@@ -47,7 +45,7 @@ def collate_fn(batch):
 if __name__ == "__main__":
 
     # Importo il CSV e lo converto in un dataframe
-    df = pd.read_csv(user_paths.output_path_trial_csv + utils.selected_file + ".csv")
+    df = pd.read_csv(user_paths.output_path_trial_csv + utils.single_file + ".csv")
 
     # Funzione per impostare il seed
     utils.seed_everything(utils.seed)
@@ -77,6 +75,9 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(utils.best_model_path))
     criterion = torch.nn.BCEWithLogitsLoss()  # Binary cross-entropy for binary classification
 
+    # Stampo modello
+    summary(model, input_size=(utils.batch_size, utils.seq_length, utils.num_channels))
+
     # Valutazione finale sul test set
     model.eval()
     with torch.no_grad():
@@ -102,9 +103,20 @@ if __name__ == "__main__":
             correct_test_predictions += (torch.squeeze(predictions, 1) == labels).sum().item()
             total_test_samples += labels.size(0)
 
-
     # Calcola loss e accuracy medie sul test set
     test_loss /= len(test_loader)
     test_accuracy = correct_test_predictions / total_test_samples
 
     print(f'Test Loss: {test_loss}, Test Accuracy: {test_accuracy}')
+
+    '''
+    # Accedi ai pesi dello strato GATConv
+    gat_conv_weights = model.GCN.conv2
+    print(gat_conv_weights)
+    
+    # Crea il grafo con i pesi aggiornati
+    G_with_weights = graphCreation.createGraphWithWeights(gat_conv_weights)
+    
+    # Plotta il grafo con i pesi aggiornati
+    graphCreation.plotGraph(G_with_weights)
+    '''

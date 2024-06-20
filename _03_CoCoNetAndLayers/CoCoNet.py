@@ -15,8 +15,6 @@ sys.path.append(parent_dir)
 from _02_graphDefinition import graphNetworkxToPyg
 from _03_CoCoNetAndLayers import LSTM, GCN
 
-
-
 class CoCoNet(torch.nn.Module):
     def __init__(self, seq_lenght, hidden_size, num_layers, bidirectional, dim_lastConvGCN, G):
         super(CoCoNet, self).__init__()
@@ -32,7 +30,6 @@ class CoCoNet(torch.nn.Module):
 
         self.GCN = GCN.GCN(output_size_lstm)
         self.fc = nn.Linear(dim_lastConvGCN, 1)
-
 
     def forward(self, data, num_trials):
         # Pass data through LSTM
@@ -56,5 +53,3 @@ class CoCoNet(torch.nn.Module):
         logits = self.fc(gcn_out)
 
         return logits, gcn_out
-
-

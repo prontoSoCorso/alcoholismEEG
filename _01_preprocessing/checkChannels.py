@@ -1,18 +1,22 @@
 import pandas as pd
 
+import os
+# Ottieni il percorso del file corrente
+current_file_path = os.path.abspath(__file__)
+# Risali la gerarchia fino alla cartella "alcoholismEEG"
+parent_dir = os.path.dirname(current_file_path)
+while not os.path.basename(parent_dir) == "alcoholismEEG":
+    parent_dir = os.path.dirname(parent_dir)
 import sys
-sys.path.append("C:/Users/loren/OneDrive - Università di Pavia/Magistrale - Sanità Digitale/alcoholismEEG/")
+sys.path.append(parent_dir)
+
 from config import user_paths
-
-
 
 # Importo il CSV e lo converto in un dataframe
 df = pd.read_csv(user_paths.output_path_csv)
 
-print(df.columns)  # Stampa i nomi delle colonnev
-
+print(df.columns)  # print columns name
 print(df['Channel'].unique())
-
 
 my_channels = (['FP1', 'FP2', 'F7', 'F8', 'AF1', 'AF2', 'FZ', 'F4', 'F3', 'FC6',
        'FC5', 'FC2', 'FC1', 'T8', 'T7', 'CZ', 'C3', 'C4', 'CP5', 'CP6',
@@ -35,8 +39,8 @@ my_channels2 = ['FP1', 'FPZ', 'FP2',
                'X', 'nd', 'Y'
                ]
 
-# A noi mancano P9, P10, IZ
-# Probabilmente X è P9, Y è P10 e Iz è nd
+# We don't have P9, P10, IZ
+# Probably X is P9, Y is P10 and Iz is nd in the classic EEG configuration with 64 electrods
 
 their_channels = (["FP1","FPZ","FP2",
                    "AF7","AF3","AFZ","AF4","AF8",
@@ -48,10 +52,3 @@ their_channels = (["FP1","FPZ","FP2",
                    "PO7","PO3","POZ","PO4","PO8",
                    "O1","OZ","O2",
                    "IZ"])
-
-
-
-
-print("===========================")
-
-

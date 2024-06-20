@@ -20,8 +20,10 @@ class utils:
     # generics
     seed = 2024
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    selected_file = "S1_obj"          # S1_obj, S2_nomatch, S2_match
-    best_model_path = "./_05_test/best_model_" + selected_file + ".pth"
+    #selected_file = "S1_obj"          # S1_obj, S2_nomatch, S2_match
+    single_file = "S1_obj"          # S1_obj, S2_nomatch, S2_match
+    best_model_path = "./_05_test/best_model_" + single_file + ".pth"
+    files = ["S1_obj", "S2_nomatch", "S2_match"]
 
     # Funzione per impostare il seed
     def seed_everything(seed=0):
@@ -42,17 +44,20 @@ class utils:
     
     # LSTM params
     seq_length =  256
-    hidden_size = 64
+    hidden_size = 32    # Raddoppia essendo bidirectional
     num_layers = 2
-    bidirectional = False
+    bidirectional = True
    
     # GCN params
     dim_firstConvGCN = 32
     kernel_size_1 = 5
     padding_size_1 = math.floor(kernel_size_1/2)
-    dim_lastConvGCN = 16
+    dim_secondConvGCN = 16
     kernel_size_2 = 3
     padding_size_2 = math.floor(kernel_size_2/2)
+    dim_lastConvGCN = 8
+    kernel_size_3 = 3
+    padding_size_3 = math.floor(kernel_size_3/2)
 
     # wandb parameters
     project_name = "CoCoNet_for_alcoholismEEG"

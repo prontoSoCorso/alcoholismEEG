@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import pywt
 
-
 import os
 # Ottieni il percorso del file corrente
 current_file_path = os.path.abspath(__file__)
@@ -14,10 +13,8 @@ while not os.path.basename(parent_dir) == "alcoholismEEG":
 import sys
 sys.path.append(parent_dir)
 
-
 from config import user_paths as path
 from config import utils
-
 
 """
 Normalization Strategies
@@ -55,14 +52,12 @@ Best Practices and Recommendations
 """
 
 
-
 # Normalization (z-score)
 def normalize_data(data):
     """Normalize the EEG data using z-score normalization."""
     scaler = StandardScaler()
     data_normalized = scaler.fit_transform(data.T).T  # Transpose to normalize and then transpose back
     return data_normalized
-
 
 
 # Denoising
@@ -103,7 +98,6 @@ def denoise_signal(signal, wavelet='db4', level=4, threshold_type='soft', sigma=
 
 
 
-
 def update_patient_data(patient_data):
     # Extract signal data and transpose it to fit the shape (n_channels, n_times)
     signal_timesteps_names = [f'Value_{i}' for i in range(utils.seq_length)]
@@ -124,8 +118,6 @@ def update_patient_data(patient_data):
     processed_data = processed_data.transpose(1, 0, 2)
     processed_data = processed_data.reshape(utils.num_channels * num_trials, utils.seq_length)
 
-
-    
     return processed_data
 
 
@@ -133,7 +125,7 @@ if __name__ == "__main__":
     df = pd.read_csv(path.output_path_csv)
 
     trials = df["Trial"].unique()
-
+    '''
     for trial in trials:
         # Apply the denoising function to each group of patient data and update the original DataFrame
         df_trial = df.loc[df["Trial"] == trial, :]
@@ -148,6 +140,19 @@ if __name__ == "__main__":
         # Salvare il DataFrame in un file CSV
         output_csv_path = path.output_path_trial_csv + trial + ".csv"
         df_trial.to_csv(output_csv_path, index=False)
+    '''
+    
+    for trial in trials:
+        # Apply the denoising function to each group of patient data and update the original DataFrame
+        df_trial = df.loc[df["Trial"] == trial, :]
+        df_processed = update_patient_data(df_trial)
+
+        df_trial.loc[:, [f'Value_{j}' for j in range(utils.seq_length)] ] = df_processed
+
+        # Salvare il DataFrame in un file CSV
+        output_csv_path = path.output_path_trial_csv + trial + ".csv"
+        df_trial.to_csv(output_csv_path, index=False)
+
 
     print("===================")
 
