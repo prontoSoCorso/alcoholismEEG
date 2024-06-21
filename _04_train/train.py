@@ -173,3 +173,7 @@ if __name__ == "__main__":
 
             # Stampa delle informazioni sull'epoca
             print(f'Epoch [{epoch+1}/{utils.num_epochs}], Train Loss: {train_loss}, Train Accuracy: {train_accuracy}, Val Loss: {val_loss}, Val Accuracy: {val_accuracy}')
+
+
+        # Closing Wandb session for each for
+        wandb.finish()

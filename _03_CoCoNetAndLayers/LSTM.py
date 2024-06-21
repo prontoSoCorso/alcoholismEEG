@@ -63,6 +63,6 @@ class LSTMnetwork(nn.Module):
             end_index = sum(num_trials[0:i+1])*num_channels
             padded_batch[i, :depth, :, :] = lstm_out[start_index:end_index, :, :].reshape(depth, num_channels, output_hidden_size)
 
-        lstm_out = padded_batch     # Riottengo forma del tipo (4, num_max_trials, 64, 64)
+        lstm_out = padded_batch     # Riottengo forma del tipo (4, num_max_trials, 64, 64 o 128)
 
         return lstm_out
