@@ -72,7 +72,10 @@ def bootstrap_metrics(all_labels, all_predictions, all_probabilities, n_bootstra
 if __name__ == "__main__":
     
     for selected_file in utils.files:
-        best_model_path = "./_05_test/bestGAT_model_" + selected_file + ".pth"
+        if utils.using_GAT:
+            best_model_path = "./_05_test/bestGAT_model_" + selected_file + ".pth"
+        else:
+            best_model_path = "./_05_test/best_model_" + selected_file + ".pth"
 
         # Importo il CSV e lo converto in un dataframe
         df = pd.read_csv(user_paths.output_path_trial_csv + selected_file + ".csv")

@@ -35,8 +35,6 @@ class GCN(torch.nn.Module):
       self.pooling = global_mean_pool
       
     
-
-
   def forward(self, data, info_batch):  # pyg batch as input
     if utils.using_GAT:
       x, edge_index, edge_weight = data.x, data.edge_index, data.edge_attr

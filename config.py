@@ -15,8 +15,8 @@ class user_paths:
     # Computer Lorenzo
     path_alcoholismEEG_data = "C:/Users/loren/Documents/Data/eegData/eeg_full/"
     output_path_csv = "C:/Users/loren/Documents/Data/eegData/eeg_data.csv"
-    output_path_trial_csv = "C:/Users/loren/Documents/Data/eegData/"
-    #output_path_trial_csv = "/home/giovanna/Documents/Data/eegData/"
+    #output_path_trial_csv = "C:/Users/loren/Documents/Data/eegData/"
+    output_path_trial_csv = "/home/giovanna/Documents/Data/eegData/"
 
     # Computer Marzio
     #path_alcoholismEEG_data = "C://users/Riccardo/Desktop/Marzio/Advanced/Project/"

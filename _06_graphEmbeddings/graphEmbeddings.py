@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -115,27 +116,30 @@ if __name__ == "__main__":
 
         # Parameter grid for UMAP
         param_grid = {
-            "n_neighbors": [10,20,30,40,50],
+            "n_neighbors": [10,20,30,40,50,60],
             "min_dist": [0.1],
             "n_components": [2],
             "metric": ["euclidean"]
         }
-
-        # Custom scoring function for silhouette score
-        def silhouette_scorer(estimator, X, y):
-            transformed_X = estimator.fit_transform(X)
-            return silhouette_score(transformed_X, y)
+        
 
         # Grid search
-        grid_search = GridSearchCV(gridSearchUMAP.UMAPEstimator(), param_grid, scoring=silhouette_scorer, cv=3, n_jobs=1)
-        grid_search.fit(gcn_out, all_labels)
+        score = []
+        for n_neighbors in param_grid.get("n_neighbors"):
+            estimator = gridSearchUMAP.UMAPEstimator(n_neighbors=n_neighbors)
+            transformed_X = estimator.fit_transform(gcn_out)
+            score.append(silhouette_score(transformed_X, all_labels))
+
+        params = {"n_neighbors":param_grid.get("n_neighbors")[score.index(max(score))]}
 
         # Best parameters
-        print("Best parameters found: ", grid_search.best_params_)
-        print("Best silhouette score: ", grid_search.best_score_)
+        print("Best parameters found: ", params.get("n_neighbors"))
+        print("Best silhouette score: ", max(score))
         
         # Plot UMAP
-        plotUMAP.plot_umap(gcn_out, all_labels, grid_search.best_params_)
+        plotUMAP.plot_umap(data = gcn_out, labels = all_labels, params = params, file_name = selected_file)
+        
+        
 
         if utils.using_GAT:
             num_attention_weights = len(G.edges)+utils.num_channels
@@ -151,4 +155,4 @@ if __name__ == "__main__":
             attention_weights = attentionGraph.average_subtensors(all_weights, num_edges).squeeze(1).tolist()
             self_attention_weights = attentionGraph.average_subtensors(self_attention_weights, utils.num_channels).squeeze(1).tolist()
             
-            attentionGraph.plot_weight_difference(G, attention_weights)
+            attentionGraph.plot_weight_difference(G, attention_weights, file_name = selected_file)

@@ -37,20 +37,22 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
-def plot_weight_difference(graph, new_weights, node_importance = None):
+def plot_weight_difference(graph, new_weights, file_name, node_importance = None):
     max_weight = max([graph[u][v]['weight'] for u, v in graph.edges()])
     min_weight = min([graph[u][v]['weight'] for u, v in graph.edges()])
 
     # Compare edge weights and assign colors
     edge_colors = []
     count = 0
+    t = 0.1
     for u, v in graph.edges():
+
         old_weight = (graph[u][v]['weight']-min_weight)/(max_weight-min_weight)
         new_weight = (new_weights[count]-min(new_weights))/(max(new_weights)-min(new_weights))
         
-        if old_weight < new_weight:
+        if old_weight+t < new_weight:
             edge_colors.append('green')  # Weight increased
-        elif old_weight > new_weight:
+        elif old_weight-t > new_weight:
             edge_colors.append('red')    # Weight decreased
         else:
             edge_colors.append('gray')   # Weight stayed the same
@@ -58,6 +60,7 @@ def plot_weight_difference(graph, new_weights, node_importance = None):
         graph[u][v]['weight'] = abs(old_weight-new_weight)
             
         count = count+1
+
     """
     # Assign colors to nodes based on importance
     node_colors = []
@@ -70,7 +73,6 @@ def plot_weight_difference(graph, new_weights, node_importance = None):
         importance = node_importance.get(node, 0)
         # Normalize importance and get the corresponding color
         node_colors.append(cmap(norm(importance)))
-
     """
 
     # Plot the unified graph
@@ -79,8 +81,8 @@ def plot_weight_difference(graph, new_weights, node_importance = None):
     #pos = nx.spring_layout(unified_graph)  # Layout for visualization
     #nx.draw(unified_graph, pos, edge_color=edge_colors, node_color=node_colors, with_labels=True, node_size=500)
     nx.draw(G=graph, pos=pos, edge_color=edge_colors, with_labels=True, node_size=500)
-    edge_labels = {(u, v): f"{w:.2f}" for u, v, w in graph.edges(data='weight')}
-    nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels, font_size=8)  # Adjust font size for edge labels
+    #edge_labels = {(u, v): f"{w:.2f}" for u, v, w in graph.edges(data='weight')}
+    #nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels, font_size=8)  # Adjust font size for edge labels
 
     # Create a colorbar as a legend
     #sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -88,7 +90,7 @@ def plot_weight_difference(graph, new_weights, node_importance = None):
     #cbar = plt.colorbar(sm)
     #cbar.set_label('Node Importance')
 
-    plt.show()
+    plt.savefig("attGraphS1_" + file_name)
 
 """
 # Example usage
