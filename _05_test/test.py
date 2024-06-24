@@ -43,7 +43,7 @@ def collate_fn(batch):
 if __name__ == "__main__":
     
     for selected_file in utils.files:
-        best_model_path = "./_05_test/best_model_" + selected_file + ".pth"
+        best_model_path = "./_05_test/bestGAT_model_" + selected_file + ".pth"
 
         # Importo il CSV e lo converto in un dataframe
         df = pd.read_csv(user_paths.output_path_trial_csv + selected_file + ".csv")
@@ -135,14 +135,3 @@ if __name__ == "__main__":
         print(f'Brier Score: {brier}')
         print(f'Balanced Accuracy: {balanced_acc}')
 
-        '''
-        # Accedi ai pesi dello strato GATConv
-        gat_conv_weights = model.GCN.conv2
-        print(gat_conv_weights)
-        
-        # Crea il grafo con i pesi aggiornati
-        G_with_weights = graphCreation.createGraphWithWeights(gat_conv_weights)
-        
-        # Plotta il grafo con i pesi aggiornati
-        graphCreation.plotGraph(G_with_weights)
-        '''

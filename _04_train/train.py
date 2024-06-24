@@ -44,7 +44,7 @@ def collate_fn(batch):
 if __name__ == "__main__":
 
     for selected_file in utils.files:
-        best_model_path = "./_05_test/best_model_" + selected_file + ".pth"
+        best_model_path = "./_05_test/bestGAT_model_" + selected_file + ".pth"
         exp_name = utils.exp_name + "," + selected_file
 
         # Importo il CSV e lo converto in un dataframe

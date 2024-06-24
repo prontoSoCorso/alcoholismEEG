@@ -1,5 +1,5 @@
 import torch
-from torch_geometric.nn import GCNConv, GATConv
+from torch_geometric.nn import GCNConv, GATConv, ChebConv
 import torch.nn as nn
 from torch_geometric.nn.pool import global_mean_pool
 
@@ -17,11 +17,12 @@ from config import utils
 
 
 class GCN(torch.nn.Module):
+  '''
   def __init__(self, num_features):
     super(GCN, self).__init__()
     self.conv1 = GCNConv(num_features, utils.dim_firstConvGCN)  # First GCN layer with 16 hidden features
     self.conv1d_1 = nn.Conv1d(1,1,kernel_size=utils.kernel_size_1, padding=utils.padding_size_1)  # First CNN 1d layer
-    self.conv2 = GATConv(utils.dim_firstConvGCN, utils.dim_secondConvGCN)  # First GAT layer with output as number of classes
+    self.conv2 = GCNConv(utils.dim_firstConvGCN, utils.dim_secondConvGCN)  # First GAT layer with output as number of classes
     self.conv1d_2 = nn.Conv1d(1,1,kernel_size=utils.kernel_size_2, padding=utils.padding_size_2) # Second CNN 1d layer
     self.conv3 = GCNConv(utils.dim_secondConvGCN, utils.dim_lastConvGCN)  # Second GCN layer with output as number of classes
     self.conv1d_3 = nn.Conv1d(1,1,kernel_size=utils.kernel_size_3, padding=utils.padding_size_3) # Second CNN 1d layer
@@ -41,9 +42,30 @@ class GCN(torch.nn.Module):
     h = self.conv1d_2(h.reshape(h.size(0), 1, utils.dim_secondConvGCN)).squeeze(1)
     h = torch.nn.functional.relu(h)  # Apply ReLU activation
     
-    h = self.conv3(h, edge_index, edge_weight )
+    h = self.conv3(h, edge_index, edge_weight)
     h = torch.nn.functional.relu(h)  # Apply ReLU activation
     h = self.conv1d_3(h.reshape(h.size(0), 1, utils.dim_lastConvGCN)).squeeze(1)
+    h = torch.nn.functional.relu(h)  # Apply ReLU activation
+
+    # Apply pooling to get graph embedding
+    h = self.pooling(h, info_batch)  # Pass batch information for correct pooling
+    return h
+  '''
+
+
+  def __init__(self, num_features):
+    super(GCN, self).__init__()
+    self.conv1 = GATConv(num_features, utils.dim_lastConvGCN)  # First GAT layer with 16 hidden features
+    self.conv1d_1 = nn.Conv1d(1,1,kernel_size=utils.kernel_size_1, padding=utils.padding_size_1)  # First CNN 1d layer
+    self.pooling = global_mean_pool
+
+
+  def forward(self, data, info_batch):  # pyg batch as input
+    x, edge_index, edge_weight = data.x, data.edge_index, data.edge_attr
+
+    h = self.conv1(x, edge_index, edge_weight)
+    h = torch.nn.functional.relu(h)  # Apply ReLU activation
+    h = self.conv1d_1(h.reshape(h.size(0), 1, utils.dim_lastConvGCN)).squeeze(1)
     h = torch.nn.functional.relu(h)  # Apply ReLU activation
 
     # Apply pooling to get graph embedding

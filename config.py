@@ -57,7 +57,7 @@ class utils:
     # DataLoader
     num_channels = 64
     train_size = 0.7 
-    val_size = 0.2
+    val_size = 0.1
     test_size = 1 - (train_size + val_size)
     
     # LSTM params
@@ -83,7 +83,7 @@ class utils:
     dataset = "alcoholismEEG"
     batch_size = 4              # Numero di pazienti
     num_classes = 2
-    num_epochs = 50
+    num_epochs = 100
     learning_rate = 0.001
     optimizer_type = "Adam"     # Tipo optimizer utilizzato
 
