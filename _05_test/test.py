@@ -2,7 +2,9 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from torchsummary import summary
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix, cohen_kappa_score, brier_score_loss, balanced_accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, cohen_kappa_score, brier_score_loss, balanced_accuracy_score
+from sklearn.utils import resample
+import numpy as np
 
 import os
 # Ottieni il percorso del file corrente
@@ -39,6 +41,33 @@ def collate_fn(batch):
         labels[i] = label
 
     return padded_batch, labels, num_trials
+
+def calculate_metrics(all_labels, all_predictions, all_probabilities):
+    accuracy = accuracy_score(all_labels, all_predictions)
+    precision = precision_score(all_labels, all_predictions)
+    recall = recall_score(all_labels, all_predictions)
+    f1 = f1_score(all_labels, all_predictions)
+    kappa = cohen_kappa_score(all_labels, all_predictions)
+    brier = brier_score_loss(all_labels, all_probabilities)
+    balanced_acc = balanced_accuracy_score(all_labels, all_predictions)
+    return accuracy, precision, recall, f1, kappa, brier, balanced_acc
+
+def bootstrap_metrics(all_labels, all_predictions, all_probabilities, n_bootstraps=1000, alpha=0.95):
+    bootstrapped_metrics = []
+
+    for _ in range(n_bootstraps):
+        indices = np.random.randint(0, len(all_labels), len(all_labels))
+        if len(np.unique(all_labels[indices])) < 2 or len(np.unique(all_predictions[indices])) < 2:
+            continue
+        
+        metrics = calculate_metrics(all_labels[indices], all_predictions[indices], all_probabilities[indices])
+        bootstrapped_metrics.append(metrics)
+
+    bootstrapped_metrics = np.array(bootstrapped_metrics)
+    lower = np.percentile(bootstrapped_metrics, (1 - alpha) / 2 * 100, axis=0)
+    upper = np.percentile(bootstrapped_metrics, (1 + alpha) / 2 * 100, axis=0)
+    
+    return lower, upper
 
 if __name__ == "__main__":
     
@@ -85,7 +114,6 @@ if __name__ == "__main__":
             test_loss = 0.0
             correct_test_predictions = 0
             total_test_samples = 0
-            gcn_out = []
             all_labels = []
             all_predictions = []
             all_probabilities = []
@@ -94,9 +122,11 @@ if __name__ == "__main__":
                 inputs = inputs.to(utils.device)
                 labels = labels.float().to(utils.device)
 
-                outputs, gcn_out_tmp = model(inputs, num_trials)
+                if utils.using_GAT:
+                    outputs, _, _ = model(inputs, num_trials)
+                else:
+                    outputs, _ = model(inputs, num_trials)
 
-                gcn_out.append(gcn_out_tmp.reshape(inputs.size(0), utils.dim_lastConvGCN))
                 all_labels.append(labels.cpu())
                 loss = criterion(torch.squeeze(outputs, 1), labels)
                 test_loss += loss.item()
@@ -117,21 +147,16 @@ if __name__ == "__main__":
         all_probabilities = torch.cat(all_probabilities).squeeze(1).numpy()
 
         # Calcola metriche aggiuntive
-        precision = precision_score(all_labels, all_predictions)
-        recall = recall_score(all_labels, all_predictions)
-        f1 = f1_score(all_labels, all_predictions)
-        conf_matrix = confusion_matrix(all_labels, all_predictions)
-        kappa = cohen_kappa_score(all_labels, all_predictions)
-        brier = brier_score_loss(all_labels, all_probabilities)
-        balanced_acc = balanced_accuracy_score(all_labels, all_predictions)
+        accuracy, precision, recall, f1, kappa, brier, balanced_acc = calculate_metrics(all_labels, all_predictions, all_probabilities)
+
+        # Calcola gli intervalli di confidenza
+        lower, upper = bootstrap_metrics(all_labels, all_predictions, all_probabilities)
 
         print(f'Test Loss: {test_loss}')
-        print(f'Test Accuracy: {test_accuracy}')
-        print(f'Precision: {precision}')
-        print(f'Recall: {recall}')
-        print(f'F1 Score: {f1}')
-        print(f'Confusion Matrix:\n {conf_matrix}')
-        print(f'Cohen\'s Kappa: {kappa}')
-        print(f'Brier Score: {brier}')
-        print(f'Balanced Accuracy: {balanced_acc}')
-
+        print(f'Test Accuracy: {test_accuracy} (95% CI: {lower[0]} - {upper[0]})')
+        print(f'Precision: {precision} (95% CI: {lower[1]} - {upper[1]})')
+        print(f'Recall: {recall} (95% CI: {lower[2]} - {upper[2]})')
+        print(f'F1 Score: {f1} (95% CI: {lower[3]} - {upper[3]})')
+        print(f'Cohen\'s Kappa: {kappa} (95% CI: {lower[4]} - {upper[4]})')
+        print(f'Brier Score: {brier} (95% CI: {lower[5]} - {upper[5]})')
+        print(f'Balanced Accuracy: {balanced_acc} (95% CI: {lower[6]} - {upper[6]})')

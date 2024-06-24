@@ -14,6 +14,7 @@ sys.path.append(parent_dir)
 
 from _02_graphDefinition import graphNetworkxToPyg
 from _03_CoCoNetAndLayers import LSTM, GCN
+from config import utils
 
 class CoCoNet(torch.nn.Module):
     def __init__(self, seq_lenght, hidden_size, num_layers, bidirectional, dim_lastConvGCN, G):
@@ -47,9 +48,16 @@ class CoCoNet(torch.nn.Module):
         info_batch = torch.tensor([i for i in range(batch_size) for _ in range(len(self.G.nodes)*num_trials[i])], dtype=torch.long)
 
         # Pass LSTM output through GCN
-        gcn_out = self.GCN(pyg_batch, info_batch)
+        if utils.using_GAT:
+            gcn_out, (attention_index, attention_weights) = self.GCN(pyg_batch, info_batch)
+        else:
+            gcn_out = self.GCN(pyg_batch, info_batch)
 
         # Apply final linear layer
         logits = self.fc(gcn_out)
 
-        return logits, gcn_out
+        if utils.using_GAT:
+            return logits, gcn_out, (attention_index, attention_weights)
+        else:
+            return logits, gcn_out
+        

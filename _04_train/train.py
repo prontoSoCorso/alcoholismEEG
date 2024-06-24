@@ -114,7 +114,10 @@ if __name__ == "__main__":
                 optimizer.zero_grad()  # Azzeramento dei gradienti
 
                 # Calcolo output modello
-                outputs, _ = model(inputs, num_trials)
+                if utils.using_GAT:
+                    outputs, _, _ = model(inputs, num_trials)
+                else:
+                    outputs, _ = model(inputs, num_trials)
 
                 # Calcola la loss
                 loss = criterion(torch.squeeze(outputs, 1), labels)
@@ -140,7 +143,10 @@ if __name__ == "__main__":
                     inputs = inputs.to(utils.device)
                     labels = labels.float().to(utils.device)
 
-                    outputs, _ = model(inputs, num_trials)
+                    if utils.using_GAT:
+                        outputs, _, _ = model(inputs, num_trials)
+                    else:
+                        outputs, _ = model(inputs, num_trials)
 
                     loss = criterion(torch.squeeze(outputs, 1), labels)
                     epoch_val_loss += loss.item()

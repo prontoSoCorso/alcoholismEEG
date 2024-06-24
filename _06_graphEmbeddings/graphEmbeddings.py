@@ -12,7 +12,7 @@ while not os.path.basename(parent_dir) == "alcoholismEEG":
 import sys
 sys.path.append(parent_dir)
 
-from _02_graphDefinition import graphCreation
+from _02_graphDefinition import graphCreation, attentionGraph
 from _03_CoCoNetAndLayers import CoCoNet
 from _04_train import loadData
 from config import utils
@@ -49,7 +49,10 @@ def collate_fn(batch):
 if __name__ == "__main__":
 
     for selected_file in utils.files:
-        best_model_path = "./_05_test/best_model_" + selected_file + ".pth"
+        if utils.using_GAT:
+            best_model_path = "./_05_test/bestGAT_model_" + selected_file + ".pth"
+        else:
+            best_model_path = "./_05_test/best_model_" + selected_file + ".pth"
 
         # Importo il CSV e lo converto in un dataframe
         df = pd.read_csv(user_paths.output_path_trial_csv + selected_file + ".csv")
@@ -79,18 +82,25 @@ if __name__ == "__main__":
         with torch.no_grad():
             gcn_out = []
             all_labels = []
+            if utils.using_GAT:
+                all_weights = []
+                all_num_trials = []
 
             for inputs, labels, num_trials in loader:
                 inputs = inputs.to(utils.device)
                 labels = labels.float().to(utils.device)
 
-                outputs, gcn_out_tmp = model(inputs, num_trials)
+                if utils.using_GAT:
+                    outputs, gcn_out_tmp, (attention_index, attention_weights) = model(inputs, num_trials)
+                    all_weights.append(attention_weights)
+                    all_num_trials.append(sum(num_trials))
+                else:
+                    outputs, gcn_out_tmp = model(inputs, num_trials)
 
                 gcn_out.append(gcn_out_tmp)
                 all_labels.append(labels)
 
                 loss = criterion(torch.squeeze(outputs, 1), labels)
-
                 predictions = (outputs > 0.5).float()
 
         
@@ -105,7 +115,7 @@ if __name__ == "__main__":
 
         # Parameter grid for UMAP
         param_grid = {
-            "n_neighbors": [10,20,30],
+            "n_neighbors": [10,20,30,40,50],
             "min_dist": [0.1],
             "n_components": [2],
             "metric": ["euclidean"]
@@ -126,3 +136,19 @@ if __name__ == "__main__":
         
         # Plot UMAP
         plotUMAP.plot_umap(gcn_out, all_labels, grid_search.best_params_)
+
+        if utils.using_GAT:
+            num_attention_weights = len(G.edges)+utils.num_channels
+
+            num_edges = len(G.edges)
+
+            self_attention_weights = []
+            for i, weights in enumerate(all_weights):
+                self_attention_weights.append(weights[(all_num_trials[i]*num_edges):,0].unsqueeze(1))
+                all_weights[i] = weights[:(all_num_trials[i]*num_edges),0].unsqueeze(1)
+
+
+            attention_weights = attentionGraph.average_subtensors(all_weights, num_edges).squeeze(1).tolist()
+            self_attention_weights = attentionGraph.average_subtensors(self_attention_weights, utils.num_channels).squeeze(1).tolist()
+            
+            attentionGraph.plot_weight_difference(G, attention_weights)
